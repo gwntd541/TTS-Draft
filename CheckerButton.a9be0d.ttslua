@@ -1,0 +1,186 @@
+--[[ Lua code. See documentation: http://berserk-games.com/knowledgebase/scripting/ --]]
+
+green_bag= '186a27'
+blue_bag= 'e03446'
+buttonchecker= 'e2e603'
+booster_pack_pos = {0, 3, 0}
+creating = false
+paused = false
+OGbags = false
+GbagPos = {}
+
+btn1 = {}
+btn1.click_function = 'packsForAll'
+btn1.function_owner = self
+btn1.label = "Create Packs"
+btn1.width = 1200
+btn1.height = 600
+btn1.font_size = 210
+btn1.rotation = {0, 180, 0}
+btn1.position = {0, 0.8, 0}
+
+--[[ The onLoad event is called after the game save finishes loading. --]]
+function onLoad()
+  print('onLoad!')
+  -- create bags. ends up creating bags every time.
+  if OGbags == false then
+      local pos = self.getPosition()
+      bag1Pos = pos:copy()
+      bag1Pos.z = bag1Pos.z + 4
+      Bag1 = spawnBag(bag1Pos, true)
+      Bag1.setColorTint({0.192, 0.701, 0.168})
+      bag1Pos.x = bag1Pos.x + 4
+      Bag2 = spawnBag(bag1Pos, true)
+      Bag2.setColorTint({0.118, 0.53, 1})
+  end
+  Gbag = Bag1
+  Bbag = Bag2
+  --[[--cjson = get_json()
+  cjson_str = JSON.decode(cjson)
+  param = {
+      json = cjso_str
+  }
+  spawnObjectJSON(param)]]--
+  Gbag_pos = Gbag.getPosition()
+  Bbag_pos = Bbag.getPosition()
+  self.setName('CheckerButton')
+  self.createButton(btn1)
+end
+
+function readTable(table, format)
+    if format == 1 then
+        for k,v in pairs(table) do
+            print(k .. ' ' .. v)
+        end
+    else
+        for k,v in pairs(table) do
+            for i, j in pairs(v) do
+                print(k .. ' ' .. i .. ' ' .. j)
+            end
+        end
+    end
+end
+
+function packsForAll()
+    print('Learning is fun. Sort of.')
+    startLuaCoroutine(self, "packsForAllCoroutine")
+end
+
+function packsForAllCoroutine()
+    createBoosterPack()
+    while creating do
+      coroutine.yield(0)
+    end
+    waitFrames(75)
+    printToAll("Finished!")
+    return 1
+end
+
+function createBoosterPack(GO)
+  printToAll("Creating Packs, Please Wait", {0, 0, 1})
+  if creating == false then
+    creating = true
+    createBoosterPackCoroutine()
+  end
+  return
+end
+
+function createBoosterPackCoroutine()
+    print("createBoosterPackCoroutine")
+
+  local total = Gbag.getQuantity() -- get # deck in bag
+  if total == 0 then
+      creating = false
+      unpause()
+      printToAll("Nothing in bag!")
+      return 1
+  end
+  selfPos = self.getPosition()
+  spawnBagPos = selfPos:copy()
+  spawnBagPos.x = spawnBagPos.x + 3
+  --!Spawnpawn cube!
+  cube = getDeck(Gbag, spawnBagPos)
+  cube.shuffle()
+  cubeCount = cube.getQuantity()
+  --!cut the cube into boosters!
+  local i
+  while cubeCount > 15 do
+      local bag = spawnBag(spawnBagPos)
+      waitFrames(20)
+      local boosterDeck = cutDeck(cube, 15)
+      if boosterDeck then
+          bag.putObject(boosterDeck)
+          Bbag.putObject(bag)
+      end
+      cubeCount = cube.getQuantity()
+      if cubeCount < 15 then
+          --cleanup lefover cards
+          Gbag.putObject(cube)
+      end
+  end
+
+  creating = false
+  print('end createBoosterPackCoroutine')
+  --coroutine.resume(packsForAllCoroutine)    --testing
+  return 1      --not needed?
+end
+
+function spawnBag(pos, skip)
+  local p = {}
+  p.position = pos
+  p.type = "Bag"
+  p.callback = "unpause"
+  p.callback_owner = self
+  p.smooth = false
+
+  local bag = spawnObject(p)
+  if skip == true then
+      return bag
+  end
+
+  paused = true
+
+  while paused do
+    coroutine.yield(0)
+  end
+  return bag
+end
+
+function getDeck(deck, pos)
+  local p = {}
+  p.position = pos
+  p.rotation = {180, 0, 0}
+  p.smooth = false
+  local rdeck = deck.takeObject(p)
+  return rdeck
+end
+
+function cutDeck(deck, amt)
+    local total = deck.getQuantity()
+    if total == 15 then
+        return deck
+    elseif total < 15 then
+        print("Cube has quantitiy indivisible by 15")
+        return
+    end
+    local cdeck = deck.cut(15)
+    -- return the cut deck value
+    return cdeck[2]
+end
+
+
+function unpause()
+  paused = false
+end
+
+function waitFrames(frames)
+  while frames > 0 do
+    coroutine.yield(0)
+    frames = frames - 1
+  end
+end
+
+--[[ The onUpdate event is called once per frame. --]]
+function onUpdate ()
+    --[[ print('onUpdate loop!') --]]
+end
