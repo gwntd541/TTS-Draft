@@ -47,6 +47,10 @@ function onLoad()
   self.createButton(btn1)
 end
 
+function get_json()
+
+end
+
 function readTable(table, format)
     if format == 1 then
         for k,v in pairs(table) do
@@ -67,6 +71,8 @@ function packsForAll()
 end
 
 function packsForAllCoroutine()
+    creating = false
+    paused = false
     createBoosterPack()
     while creating do
       coroutine.yield(0)
@@ -97,16 +103,25 @@ function createBoosterPackCoroutine()
   end
   selfPos = self.getPosition()
   spawnBagPos = selfPos:copy()
-  spawnBagPos.x = spawnBagPos.x + 3
+  spawnDeckPos = selfPos:copy()
+  spawnDeckPos.x = spawnDeckPos.x + 8
+  spawnBagPos.x = spawnBagPos.x + 4
   --!Spawnpawn cube!
-  cube = getDeck(Gbag, spawnBagPos)
+  cube = getDeck(Gbag, spawnDeckPos)
   cube.shuffle()
   cubeCount = cube.getQuantity()
   --!cut the cube into boosters!
   local i
-  while cubeCount > 15 do
+  while cubeCount >= 15 do
       local bag = spawnBag(spawnBagPos)
-      waitFrames(20)
+      waitFrames(40)
+      -- Even end condition
+      if cubeCount == 15 then
+          bag.putObject(cube)
+          Bbag.putObject(bag)
+          break
+      end
+      -- Leftover condition
       local boosterDeck = cutDeck(cube, 15)
       if boosterDeck then
           bag.putObject(boosterDeck)
@@ -157,10 +172,11 @@ end
 
 function cutDeck(deck, amt)
     local total = deck.getQuantity()
+    print(total)
     if total == 15 then
         return deck
     elseif total < 15 then
-        print("Cube has quantitiy indivisible by 15")
+        print("Cube has quantity indivisible by 15")
         return
     end
     local cdeck = deck.cut(15)
